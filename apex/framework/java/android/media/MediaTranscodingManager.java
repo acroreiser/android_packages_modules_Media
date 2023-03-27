@@ -22,6 +22,7 @@ import android.annotation.IntRange;
 import android.annotation.NonNull;
 import android.annotation.Nullable;
 import android.annotation.SystemApi;
+import android.app.ActivityManager;
 import android.content.ContentResolver;
 import android.content.Context;
 import android.content.res.AssetFileDescriptor;
@@ -123,6 +124,7 @@ public final class MediaTranscodingManager {
     private final String mPackageName;
     private final int mPid;
     private final int mUid;
+    private final boolean mIsLowRamDevice;
     private final ExecutorService mExecutor = Executors.newSingleThreadExecutor();
     private final HashMap<Integer, TranscodingSession> mPendingTranscodingSessions = new HashMap();
     private final Object mLock = new Object();
@@ -209,7 +211,10 @@ public final class MediaTranscodingManager {
         if (!SdkLevel.isAtLeastS()) {
             return null;
         }
-
+        // Do not try to get the service on AndroidGo (low-ram) devices.
+        if (mIsLowRamDevice) {
+            return null;
+        }
         int retryCount = !retry ? 1 :  CONNECT_SERVICE_RETRY_COUNT;
         Log.i(TAG, "get service with retry " + retryCount);
         for (int count = 1;  count <= retryCount; count++) {
@@ -427,6 +432,7 @@ public final class MediaTranscodingManager {
         mPackageName = mContext.getPackageName();
         mUid = Os.getuid();
         mPid = Os.getpid();
+        mIsLowRamDevice = mContext.getSystemService(ActivityManager.class).isLowRamDevice();
     }
 
     /**
